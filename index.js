@@ -84,6 +84,84 @@ app.event("reaction_removed", async (ctx) => {
   });
 });
 
+app.shortcut("reload_stars", async (ctx) => {
+  console.log("Reload stars called");
+
+  await ctx.ack();
+
+  if (ctx.payload.channel.id == STARBOARD_CHANNEL) {
+    console.log("Ignoring request to reload stars on starboard channel");
+    return;
+  }
+
+  // Just in case I get resolveMessage() working for this...
+  const message = ctx.payload.message;
+  const resolution = {
+    messageId: message.ts,
+    channel: ctx.payload.channel.id,
+  };
+
+  const reactions = await ctx.client.reactions.get({
+    full: true,
+    channel: resolution.channel,
+    timestamp: resolution.messageId,
+  });
+
+  const star = reactions.message.reactions.find(
+    (reaction) => reaction.name == "star"
+  );
+
+  const users = new Set(star?.users);
+
+  const postId = db
+    .prepare("SELECT postId FROM posts WHERE messageId == ?")
+    .pluck()
+    .get(resolution.messageId);
+
+  if (postId) {
+    const channelReactions = await ctx.client.reactions.get({
+      full: true,
+      channel: STARBOARD_CHANNEL,
+      timestamp: postId,
+    });
+    const star = reactions.message.reactions.find(
+      (reaction) => reaction.name == "star"
+    );
+    if (star) {
+      for (const user of star.users) {
+        users.add(user);
+      }
+    }
+  }
+
+  // Get rid of old stars:
+  db.prepare("DELETE FROM stars WHERE messageId == ? AND channelId == ?").run(
+    resolution.messageId,
+    resolution.channel
+  );
+
+  for (const user of users) {
+    // No self-starring
+    if (user == message.user) continue;
+    try {
+      db.prepare(
+        "INSERT INTO stars (messageId, authorId, channelId) VALUES (?, ?, ?)"
+      ).run(resolution.messageId, user, resolution.channel);
+    } catch (err) {
+      if (err.code != "SQLITE_CONSTRAINT_UNIQUE") {
+        console.log(err.code);
+        throw err;
+      }
+    }
+  }
+
+  await updateStarboard({
+    messageId: resolution.messageId,
+    channelId: resolution.channel,
+    client: ctx.client,
+  });
+});
+
 async function updateStarboard({messageId, channelId, client}) {
   const postId = db
     .prepare("SELECT postId FROM posts WHERE messageId == ?")
@@ -97,9 +175,13 @@ async function updateStarboard({messageId, channelId, client}) {
   console.log(count, postId);
 
   if (count >= MINIMUM_STARS) {
+    const {permalink} = await client.chat.getPermalink({
+      channel: channelId,
+      message_ts: messageId,
+    });
     const content = `⭐ *${count}* <#${channelId}>
 
-https://cshrit.slack.com/archives/${channelId}/p${messageId.replace(".", "")}`;
+${permalink}`;
     if (postId) {
       await client.chat.update({
         channel: STARBOARD_CHANNEL,
