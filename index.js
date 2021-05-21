@@ -124,7 +124,7 @@ app.shortcut("reload_stars", async (ctx) => {
       channel: STARBOARD_CHANNEL,
       timestamp: postId,
     });
-    const star = reactions.message.reactions.find(
+    const star = channelReactions.message.reactions.find(
       (reaction) => reaction.name == "star"
     );
     if (star) {
