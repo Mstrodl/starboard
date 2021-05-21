@@ -4,8 +4,8 @@ const db = require("better-sqlite3")("./starboard.db");
 
 // Hardcoded IDs because fuck you
 const STARBOARD_CHANNEL = "C022LQWRE0J";
-// const MINIMUM_STARS = 3;
-const MINIMUM_STARS = 1;
+const MINIMUM_STARS = 2;
+// const MINIMUM_STARS = 1;
 
 const app = new Bolt.App({
   token: secrets.slackToken,
@@ -37,8 +37,8 @@ async function resolveMessage(ctx) {
     limit: 1,
   });
 
-  // // No self-starring
-  // if (messages[0].user == ctx.payload.user) return;
+  // No self-starring
+  if (messages[0].user == ctx.payload.user) return;
 
   return {
     channel,
