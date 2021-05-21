@@ -199,7 +199,7 @@ ${permalink}`;
         text: content,
       });
       db.prepare(
-        "INSERT INTO posts (messageId, channelId, postId, authorId) VALUES (?, ?, ?)"
+        "INSERT INTO posts (messageId, channelId, postId, authorId) VALUES (?, ?, ?, ?)"
       ).run(messageId, channelId, response.message.ts, authorId);
     }
   } else if (postId) {
