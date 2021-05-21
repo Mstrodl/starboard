@@ -1,0 +1,12 @@
+starboard.db
+pnpm-debug.log
+.tern-port
+secrets.json
+package-lock.json
+*~
+\#*\#
+node_modules
+yarn-error.log
+npm-error.log
+/.vscode
+/.idea

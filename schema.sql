@@ -1,0 +1,13 @@
+CREATE TABLE stars(
+  channelId TEXT NOT NULL,
+  authorId TEXT NOT NULL,
+  messageId TEXT NOT NULL PRIMARY KEY,
+  UNIQUE(messageId, authorId, channelId) 
+);
+
+CREATE TABLE posts(
+  messageId TEXT NOT NULL PRIMARY KEY,
+  channelId TEXT NOT NULL,
+  postId TEXT NOT NULL UNIQUE,
+  UNIQUE(messageId, channelId)
+);

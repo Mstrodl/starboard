@@ -1,0 +1,23 @@
+{
+  "name": "starboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mstrodl/starboard.git"
+  },
+  "author": "Mary Strodl",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Mstrodl/starboard/issues"
+  },
+  "homepage": "https://github.com/Mstrodl/starboard#readme",
+  "dependencies": {
+    "@slack/bolt": "^3.3.0",
+    "better-sqlite3": "^7.4.0"
+  }
+}
