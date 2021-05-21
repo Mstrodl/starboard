@@ -2,10 +2,8 @@ const Bolt = require("@slack/bolt");
 const secrets = require("./secrets.json");
 const db = require("better-sqlite3")("./starboard.db");
 
-// Hardcoded IDs because fuck you
-const STARBOARD_CHANNEL = "C022LQWRE0J";
-const MINIMUM_STARS = 2;
-// const MINIMUM_STARS = 1;
+const STARBOARD_CHANNEL = secrets.starboardChannel;
+const MINIMUM_STARS = secrets.minimumStars;
 
 const app = new Bolt.App({
   token: secrets.slackToken,
