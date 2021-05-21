@@ -9,5 +9,6 @@ CREATE TABLE posts(
   messageId TEXT NOT NULL PRIMARY KEY,
   channelId TEXT NOT NULL,
   postId TEXT NOT NULL UNIQUE,
+  authorId TEXT,
   UNIQUE(messageId, channelId)
 );

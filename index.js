@@ -43,6 +43,7 @@ async function resolveMessage(ctx) {
   return {
     channel,
     messageId,
+    authorId: messages[0].user,
   };
 }
 
@@ -65,6 +66,7 @@ app.event("reaction_added", async (ctx) => {
   await updateStarboard({
     messageId: resolution.messageId,
     channelId: resolution.channel,
+    authorId: resolution.authorId,
     client: ctx.client,
   });
 });
@@ -80,6 +82,7 @@ app.event("reaction_removed", async (ctx) => {
   await updateStarboard({
     messageId: resolution.messageId,
     channelId: resolution.channel,
+    authorId: resolution.authorId,
     client: ctx.client,
   });
 });
@@ -98,6 +101,7 @@ app.shortcut("reload_stars", async (ctx) => {
   const message = ctx.payload.message;
   const resolution = {
     messageId: message.ts,
+    authorId: message.user,
     channel: ctx.payload.channel.id,
   };
 
@@ -158,11 +162,12 @@ app.shortcut("reload_stars", async (ctx) => {
   await updateStarboard({
     messageId: resolution.messageId,
     channelId: resolution.channel,
+    authorId: resolution.authorId,
     client: ctx.client,
   });
 });
 
-async function updateStarboard({messageId, channelId, client}) {
+async function updateStarboard({messageId, authorId, channelId, client}) {
   const postId = db
     .prepare("SELECT postId FROM posts WHERE messageId == ?")
     .pluck()
@@ -194,8 +199,8 @@ ${permalink}`;
         text: content,
       });
       db.prepare(
-        "INSERT INTO posts (messageId, channelId, postId) VALUES (?, ?, ?)"
-      ).run(messageId, channelId, response.message.ts);
+        "INSERT INTO posts (messageId, channelId, postId, authorId) VALUES (?, ?, ?)"
+      ).run(messageId, channelId, response.message.ts, authorId);
     }
   } else if (postId) {
     await client.chat.delete({
