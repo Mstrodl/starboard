@@ -16,6 +16,8 @@ app.start().then(() => {
 });
 
 async function resolveMessage(ctx) {
+  if (ctx.payload.reaction != "star") return;
+
   let messageId = ctx.payload.item.ts;
   let channel = ctx.payload.item.channel;
 
