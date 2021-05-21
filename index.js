@@ -1,6 +1,6 @@
 const Bolt = require("@slack/bolt");
 const secrets = require("./secrets.json");
-const db = require("better-sqlite3")("./starboard.db");
+const db = require("better-sqlite3")(__dirname + "/starboard.db");
 
 const STARBOARD_CHANNEL = secrets.starboardChannel;
 const MINIMUM_STARS = secrets.minimumStars;
