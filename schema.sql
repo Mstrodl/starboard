@@ -1,7 +1,7 @@
 CREATE TABLE stars(
   channelId TEXT NOT NULL,
   authorId TEXT NOT NULL,
-  messageId TEXT NOT NULL PRIMARY KEY,
+  messageId TEXT NOT NULL,
   UNIQUE(messageId, authorId, channelId) 
 );
 
