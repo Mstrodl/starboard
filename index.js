@@ -3,7 +3,6 @@ const secrets = require("./secrets.json");
 const db = require("better-sqlite3")(__dirname + "/starboard.db");
 
 const STARBOARD_CHANNEL = secrets.starboardChannel;
-const MINIMUM_STARS = secrets.minimumStars;
 
 const app = new Bolt.App({
   token: secrets.slackToken,
@@ -44,6 +43,7 @@ async function resolveMessage(ctx) {
     channel,
     messageId,
     authorId: messages[0].user,
+    message: messages[0],
   };
 }
 
@@ -67,6 +67,7 @@ app.event("reaction_added", async (ctx) => {
     messageId: resolution.messageId,
     channelId: resolution.channel,
     authorId: resolution.authorId,
+    message: resolution.message,
     client: ctx.client,
   });
 });
@@ -83,6 +84,7 @@ app.event("reaction_removed", async (ctx) => {
     messageId: resolution.messageId,
     channelId: resolution.channel,
     authorId: resolution.authorId,
+    message: resolution.message,
     client: ctx.client,
   });
 });
@@ -101,6 +103,7 @@ app.shortcut("reload_stars", async (ctx) => {
   const message = ctx.payload.message;
   const resolution = {
     messageId: message.ts,
+    message,
     authorId: message.user,
     channel: ctx.payload.channel.id,
   };
@@ -163,11 +166,18 @@ app.shortcut("reload_stars", async (ctx) => {
     messageId: resolution.messageId,
     channelId: resolution.channel,
     authorId: resolution.authorId,
+    message: resolution.message,
     client: ctx.client,
   });
 });
 
-async function updateStarboard({messageId, authorId, channelId, client}) {
+async function updateStarboard({
+  messageId,
+  authorId,
+  channelId,
+  message,
+  client,
+}) {
   const postId = db
     .prepare("SELECT postId FROM posts WHERE messageId == ?")
     .pluck()
@@ -179,7 +189,9 @@ async function updateStarboard({messageId, authorId, channelId, client}) {
 
   console.log(count, postId);
 
-  if (count >= MINIMUM_STARS) {
+  const minimumStarCount = message.thread_ts ? 1 : 3;
+
+  if (count >= minimumStarCount) {
     const {permalink} = await client.chat.getPermalink({
       channel: channelId,
       message_ts: messageId,
