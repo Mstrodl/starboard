@@ -3,6 +3,7 @@ const secrets = require("./secrets.json");
 const db = require("better-sqlite3")(__dirname + "/starboard.db");
 
 const STARBOARD_CHANNEL = secrets.starboardChannel;
+const REACTION_NAME = secrets.reactionName || "star";
 
 const app = new Bolt.App({
   token: secrets.slackToken,
@@ -15,7 +16,7 @@ app.start().then(() => {
 });
 
 async function resolveMessage(ctx) {
-  if (ctx.payload.reaction != "star") return;
+  if (ctx.payload.reaction != REACTION_NAME) return;
 
   let messageId = ctx.payload.item.ts;
   let channel = ctx.payload.item.channel;
@@ -29,12 +30,21 @@ async function resolveMessage(ctx) {
       channel = response.channelId;
     }
   }
-  const {messages} = await ctx.client.conversations.history({
+  const {messages} = await ctx.client.conversations.replies({
     channel,
+    ts: messageId,
     latest: messageId,
     inclusive: true,
     limit: 1,
   });
+
+  if (messages[0].ts != messageId) {
+    console.error(
+      "This shouldn't happen! Why are we differing TS!",
+      messages[0],
+      messageId
+    );
+  }
 
   // No self-starring
   if (messages[0].user == ctx.payload.user) return;
@@ -50,6 +60,8 @@ async function resolveMessage(ctx) {
 app.event("reaction_added", async (ctx) => {
   const resolution = await resolveMessage(ctx);
   if (!resolution) return;
+
+  console.log("Star reaction added");
 
   try {
     db.prepare(
@@ -79,6 +91,8 @@ app.event("reaction_removed", async (ctx) => {
   db.prepare(
     "DELETE FROM stars WHERE messageId = ? AND authorId = ? AND channelId = ?"
   ).run(resolution.messageId, ctx.payload.user, resolution.channel);
+
+  console.log("Star reaction removed");
 
   await updateStarboard({
     messageId: resolution.messageId,
@@ -115,7 +129,7 @@ app.shortcut("reload_stars", async (ctx) => {
   });
 
   const star = reactions.message.reactions?.find(
-    (reaction) => reaction.name == "star"
+    (reaction) => reaction.name == REACTION_NAME
   );
 
   const users = new Set(star?.users);
@@ -132,7 +146,7 @@ app.shortcut("reload_stars", async (ctx) => {
       timestamp: postId,
     });
     const star = channelReactions.message.reactions?.find(
-      (reaction) => reaction.name == "star"
+      (reaction) => reaction.name == REACTION_NAME
     );
     if (star) {
       for (const user of star.users) {
