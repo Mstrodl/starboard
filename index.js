@@ -251,9 +251,9 @@ ${permalink}`;
       try {
         db.prepare(
           "INSERT INTO tips (tipId, userId) VALUES ('entered_starboard', ?)"
-        ).run(ctx.payload.user);
+        ).run(authorId);
         try {
-          await ctx.client.chat.postMessage({
+          await client.chat.postMessage({
             channel: authorId,
             text: `Congratulations on your newfound <#${STARBOARD_CHANNEL}> fame! Your message got ${count} ${EMOJI}s, meaning people thought it was funny! Think of <#${STARBOARD_CHANNEL}> as democratized pins but without being limited arbitrarily!
 
