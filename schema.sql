@@ -12,3 +12,9 @@ CREATE TABLE posts(
   authorId TEXT,
   UNIQUE(messageId, channelId)
 );
+
+CREATE TABLE tips(
+  tipId TEXT NOT NULL,
+  userId TEXT NOT NULL,
+  UNIQUE(tipId, userId)
+);

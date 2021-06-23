@@ -4,6 +4,7 @@ const db = require("better-sqlite3")(__dirname + "/starboard.db");
 
 const STARBOARD_CHANNEL = secrets.starboardChannel;
 const REACTION_NAME = secrets.reactionName || "star";
+const EMOJI = "⭐";
 
 const app = new Bolt.App({
   token: secrets.slackToken,
@@ -71,6 +72,29 @@ app.event("reaction_added", async (ctx) => {
     if (err.code == "SQLITE_CONSTRAINT_UNIQUE") {
       return;
     } else {
+      throw err;
+    }
+  }
+
+  try {
+    db.prepare("INSERT INTO tips (tipId, userId) VALUES ('first_star', ?)").run(
+      ctx.payload.user
+    );
+    try {
+      await ctx.client.chat.postMessage({
+        channel: ctx.payload.user,
+        text: `Psst! You added your first ${EMOJI} to a message! Sometimes people add ${EMOJI}s to things because they don't understand what they mean, so that's where this tip comes in!
+
+Adding a ${EMOJI} to a message is sorta like an upvote of a message you think is funny. Think of them like democratized pins, but without the limit. Messages which reach a certain threshold of ${EMOJI}s get posted in <#${STARBOARD_CHANNEL}>!
+
+You're free to participate by ${EMOJI}-ing messages as you wish without being in the channel-I'll only post this tip once!`,
+      });
+    } catch (err) {
+      console.error(`Couldn't PM ${ctx.payload.user} tip!`, err);
+    }
+  } catch (err) {
+    // Already has tip!
+    if (err.code != "SQLITE_CONSTRAINT_UNIQUE") {
       throw err;
     }
   }
@@ -210,7 +234,7 @@ async function updateStarboard({
       channel: channelId,
       message_ts: messageId,
     });
-    const content = `⭐ *${count}* <#${channelId}>
+    const content = `${EMOJI} *${count}* <#${channelId}>
 
 ${permalink}`;
     if (postId) {
@@ -224,6 +248,25 @@ ${permalink}`;
         channel: STARBOARD_CHANNEL,
         text: content,
       });
+      try {
+        db.prepare(
+          "INSERT INTO tips (tipId, userId) VALUES ('entered_starboard', ?)"
+        ).run(ctx.payload.user);
+        try {
+          await ctx.client.chat.postMessage({
+            channel: authorId,
+            text: `Congratulations on your newfound <#${STARBOARD_CHANNEL}> fame! Your message got ${count} ${EMOJI}s, meaning people thought it was funny! Think of <#${STARBOARD_CHANNEL}> as democratized pins but without being limited arbitrarily!
+
+Feel free to join <#${STARBOARD_CHANNEL}> to look at other people's ${EMOJI}'d posts! I'll only post this tip once, so don't worry about joining if you don't want to :)`,
+          });
+        } catch (err) {
+          console.error(`Couldn't PM ${authorId} tip!`, err);
+        }
+      } catch (err) {
+        if (err.code != "SQLITE_CONSTRAINT_UNIQUE") {
+          throw err;
+        }
+      }
       db.prepare(
         "INSERT INTO posts (messageId, channelId, postId, authorId) VALUES (?, ?, ?, ?)"
       ).run(messageId, channelId, response.message.ts, authorId);
