@@ -12,6 +12,11 @@ const app = new Bolt.App({
   socketMode: true,
 });
 
+app.error((error) => {
+  console.error("Unhandled slack error", error);
+  throw error;
+});
+
 app.start().then(() => {
   console.log("Ready!");
 });
