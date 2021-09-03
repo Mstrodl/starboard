@@ -55,6 +55,16 @@ async function resolveMessage(ctx) {
   // No self-starring
   if (messages[0].user == ctx.payload.user) return;
 
+  const {user} = await ctx.client.users.info({
+    user: ctx.payload.user,
+  });
+
+  // No auto-react lol
+  if (user.is_bot || user.is_app_user) {
+    console.log("Ignoring bot!", user);
+    return;
+  }
+
   return {
     channel,
     messageId,
