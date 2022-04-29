@@ -5,6 +5,7 @@ const db = require("better-sqlite3")(__dirname + "/starboard.db");
 const STARBOARD_CHANNEL = secrets.starboardChannel;
 const REACTION_NAME = secrets.reactionName || "star";
 const EMOJI = "⭐";
+const BOTSPAM_CHANNEL = secrets.botspamChannel;
 
 const app = new Bolt.App({
   token: secrets.slackToken,
@@ -293,4 +294,95 @@ Feel free to join <#${STARBOARD_CHANNEL}> to look at other people's ${EMOJI}'d p
     });
     db.prepare("DELETE FROM posts WHERE messageId == ?").run(messageId);
   }
+}
+
+function topUsers(sectionTitle, users) {
+  return [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: sectionTitle,
+        emoji: true,
+      },
+    },
+    {
+      type: "section",
+      fields: users.map((user) => ({
+        type: "mrkdwn",
+        text: `<@${user.authorId}> — ${user.count} ${EMOJI}`,
+      })),
+    },
+  ];
+}
+
+app.command("/stargazers", async ({command, ack, client, respond, payload}) => {
+  await ack();
+
+  if (payload.channel_id != BOTSPAM_CHANNEL) {
+    await respond(`This command is only allowed in <#${BOTSPAM_CHANNEL}>!`);
+    return;
+  }
+
+  const topAuthors = db
+    .prepare(
+      "SELECT posts.authorId, COUNT(*) AS count FROM stars JOIN posts WHERE stars.messageId = posts.messageId GROUP BY posts.authorId ORDER BY count DESC LIMIT 10"
+    )
+    .all();
+  const topStarrers = db
+    .prepare(
+      "SELECT authorId, COUNT(*) as count FROM stars GROUP BY authorId ORDER BY count desc LIMIT 10"
+    )
+    .all();
+  const topPosts = db
+    .prepare(
+      "SELECT posts.authorId, posts.channelId, posts.messageId, COUNT(stars.authorId) AS count FROM posts JOIN stars WHERE stars.messageId = posts.messageId GROUP BY posts.messageId ORDER BY count DESC LIMIT 5"
+    )
+    .all();
+
+  await respond({
+    response_type: "in_channel",
+    blocks: [
+      ...topUsers("Top 10 Star Receivers", topAuthors),
+      ...topUsers("Top 10 Starrers (Wall of Shame)", topStarrers),
+      {
+        type: "header",
+        text: {
+          type: "plain_text",
+          text: "Top 5 Starred Posts",
+          emoji: true,
+        },
+      },
+      ...(await Promise.all(
+        topPosts.map(async (post) => [
+          {
+            type: "divider",
+          },
+          {
+            type: "section",
+            fields: [
+              {
+                type: "mrkdwn",
+                text: `${EMOJI} *${post.count}* <#${post.channelId}> — <@${
+                  post.authorId
+                }>: ${await getPermalink(
+                  post.channelId,
+                  post.messageId,
+                  client
+                )}`,
+              },
+            ],
+          },
+        ])
+      ).then((posts) => posts.flat())),
+    ],
+  });
+});
+
+async function getPermalink(channelId, messageId, client) {
+  const {permalink} = await client.chat.getPermalink({
+    channel: channelId,
+    message_ts: messageId,
+  });
+  return permalink;
 }
